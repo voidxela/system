@@ -1,6 +1,6 @@
 ---
 # ==========================================
-# PHASE 1: THE ROOT FAILSAFE
+# ROOT FAILSAFE
 # ==========================================
 # Guarantees key-based access if the playbook fails midway
 - name: Establish temporary root lifeline
@@ -10,69 +10,7 @@
     key: "{{ ssh_public_key }}"
 
 # ==========================================
-# PHASE 2: SQUATTER EVICTION
-# ==========================================
-- name: Evict default users squatting on UID 1000
-  block:
-    - name: Get entry for UID 1000
-      ansible.builtin.getent:
-        database: passwd
-        key: "{{ target_uid }}"
-      register: squatter_check
-      failed_when: false
-
-    - name: Kill processes and remove squatter user
-      block:
-        - name: Terminate squatter sessions
-          ansible.builtin.command: "pkill -u {{ target_uid }}"
-          failed_when: false
-          changed_when: true
-
-        - name: Delete the squatter account
-          ansible.builtin.user:
-            name: "{{ squatter_check.ansible_facts.getent_passwd.keys() | first }}"
-            state: absent
-            remove: true
-            force: true
-      when:
-        - squatter_check.ansible_facts.getent_passwd is defined
-        - (squatter_check.ansible_facts.getent_passwd.keys() | first) != target_username
-  ignore_unreachable: true
-
-# ==========================================
-# PHASE 3: TARGET USER PROVISIONING
-# ==========================================
-- name: Enforce primary user group structure
-  ansible.builtin.group:
-    name: "{{ target_username }}"
-    gid: "{{ target_gid }}"
-    state: present
-
-- name: Provision target user account
-  ansible.builtin.user:
-    name: "{{ target_username }}"
-    uid: "{{ target_uid }}"
-    group: "{{ target_gid }}"
-    shell: /bin/zsh
-    groups: wheel
-    append: true
-    state: present
-
-- name: Configure passwordless sudo for wheel group
-  ansible.builtin.copy:
-    content: "%wheel ALL=(ALL) NOPASSWD: ALL"
-    dest: /etc/sudoers.d/90-passwordless-wheel
-    mode: "0440"
-    validate: "/usr/sbin/visudo -cf %s"
-
-- name: Deploy authorized SSH public key
-  ansible.posix.authorized_key:
-    user: "{{ target_username }}"
-    state: present
-    key: "{{ ssh_public_key }}"
-
-# ==========================================
-# PHASE 4: SYSTEM CONFIGURATION
+# SYSTEM CONFIGURATION
 # ==========================================
 - name: Configure Enterprise Linux specific repositories
   ansible.builtin.dnf:
@@ -91,6 +29,22 @@
       - git
       - curl
     state: present
+
+- name: Install Starship prompt (Fedora/Ultramarine native)
+  ansible.builtin.dnf:
+    name: starship
+    state: present
+  when: ansible_distribution not in ['Rocky', 'AlmaLinux', 'CentOS', 'RedHat']
+
+- name: Install Starship prompt (Enterprise Linux static binary)
+  when: ansible_distribution in ['Rocky', 'AlmaLinux', 'CentOS', 'RedHat']
+  block:
+    - name: Download and extract Starship release
+      ansible.builtin.unarchive:
+        src: "https://github.com/starship/starship/releases/latest/download/starship-x86_64-unknown-linux-gnu.tar.gz"
+        dest: /usr/local/bin/
+        remote_src: true
+        mode: "0755"
 
 - name: Install eza (Fedora/Ultramarine native)
   ansible.builtin.dnf:
@@ -126,6 +80,71 @@
         path: "{{ eza_workspace.path }}"
         state: absent
 
+# ==========================================
+# SQUATTER EVICTION
+# ==========================================
+- name: Evict default users squatting on UID 1000
+  block:
+    - name: Get entry for UID 1000
+      ansible.builtin.getent:
+        database: passwd
+        key: "{{ target_uid }}"
+      register: squatter_check
+      failed_when: false
+
+    - name: Kill processes and remove squatter user
+      block:
+        - name: Terminate squatter sessions
+          ansible.builtin.command: "pkill -u {{ target_uid }}"
+          failed_when: false
+          changed_when: true
+
+        - name: Delete the squatter account
+          ansible.builtin.user:
+            name: "{{ squatter_check.ansible_facts.getent_passwd.keys() | first }}"
+            state: absent
+            remove: true
+            force: true
+      when:
+        - squatter_check.ansible_facts.getent_passwd is defined
+        - (squatter_check.ansible_facts.getent_passwd.keys() | first) != target_username
+  ignore_unreachable: true
+
+# ==========================================
+# TARGET USER PROVISIONING
+# ==========================================
+- name: Enforce primary user group structure
+  ansible.builtin.group:
+    name: "{{ target_username }}"
+    gid: "{{ target_gid }}"
+    state: present
+
+- name: Provision target user account
+  ansible.builtin.user:
+    name: "{{ target_username }}"
+    uid: "{{ target_uid }}"
+    group: "{{ target_gid }}"
+    shell: /bin/zsh
+    groups: wheel
+    append: true
+    state: present
+
+- name: Configure passwordless sudo for wheel group
+  ansible.builtin.copy:
+    content: "%wheel ALL=(ALL) NOPASSWD: ALL"
+    dest: /etc/sudoers.d/90-passwordless-wheel
+    mode: "0440"
+    validate: "/usr/sbin/visudo -cf %s"
+
+- name: Deploy authorized SSH public key
+  ansible.posix.authorized_key:
+    user: "{{ target_username }}"
+    state: present
+    key: "{{ ssh_public_key }}"
+
+# ==========================================
+# DOTFILE CONFIGURATION
+# ==========================================
 - name: Ensure base configuration directory exists
   ansible.builtin.file:
     path: "/home/{{ target_username }}/.config"
@@ -171,7 +190,7 @@
   ansible.builtin.include_tasks: firewall.yml
 
 # ==========================================
-# PHASE 5: HOUSEKEEPING & LOCKDOWN
+# HOUSEKEEPING & LOCKDOWN
 # ==========================================
 - name: Apply system hardening and optimizations
   ansible.builtin.include_tasks: housekeeping.yml
