@@ -1,0 +1,83 @@
+---
+- name: Check current disk status of managed dotfiles
+  ansible.builtin.stat:
+    path: "{{ item.dest }}"
+    checksum_algorithm: sha1
+  loop: "{{ managed_dotfiles }}"
+  register: disk_stats
+  loop_control:
+    label: "{{ item.dest }}"
+
+- name: Categorize dotfile drift states
+  ansible.builtin.set_fact:
+    safe_files: >-
+      {% set safe = [] %}
+      {% for res in disk_stats.results %}
+        {% set dest = res.item.dest %}
+        {% if not (res.stat.exists and dest in config_lock and res.stat.checksum != config_lock[dest]) %}
+          {% set _ = safe.append(res.item) %}
+        {% endif %}
+      {% endfor %}
+      {{ safe }}
+    conflict_files: >-
+      {% set conf = [] %}
+      {% for res in disk_stats.results %}
+        {% set dest = res.item.dest %}
+        {% if res.stat.exists and dest in config_lock and res.stat.checksum != config_lock[dest] %}
+          {% set _ = conf.append(res.item) %}
+        {% endif %}
+      {% endfor %}
+      {{ conf }}
+
+- name: Deploy non-conflicting templates
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: "{{ target_username }}"
+    group: "{{ target_username }}"
+    mode: "{{ item.mode }}"
+  loop: "{{ safe_files }}"
+  loop_control:
+    label: "{{ item.dest }}"
+
+- name: Handle detected configuration conflicts
+  ansible.builtin.include_tasks: handle_dotfile_conflict.yml
+  loop: "{{ conflict_files }}"
+  loop_control:
+    loop_var: file_item
+    label: "{{ file_item.dest }}"
+  when: conflict_files | length > 0
+
+- name: Re-calculate checksums for updated configuration lock
+  ansible.builtin.stat:
+    path: "{{ item.dest }}"
+    checksum_algorithm: sha1
+  loop: "{{ managed_dotfiles }}"
+  register: final_stats
+  loop_control:
+    label: "{{ item.dest }}"
+
+- name: Commit updated configuration lock to disk and memory
+  block:
+    - name: Generate new lock state
+      ansible.builtin.set_fact:
+        new_lock_state: >-
+          {% set updates = {} %}
+          {% for res in final_stats.results %}
+            {% if res.stat.exists %}
+              {% set _ = updates.update({res.item.dest: res.stat.checksum}) %}
+            {% endif %}
+          {% endfor %}
+          {{ config_lock | combine(updates) }}
+
+    - name: Write lock to disk
+      ansible.builtin.copy:
+        content: "{{ new_lock_state | to_nice_json }}"
+        dest: "{{ config_lock_path }}"
+        owner: "{{ target_username }}"
+        group: "{{ target_username }}"
+        mode: "0600"
+
+    - name: Sync memory lock
+      ansible.builtin.set_fact:
+        config_lock: "{{ new_lock_state }}"

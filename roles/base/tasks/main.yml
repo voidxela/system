@@ -99,35 +99,19 @@
   ansible.builtin.set_fact:
     config_lock: "{{ (raw_lock.content | b64decode | from_json) if lock_stat.stat.exists else {} }}"
 
-- name: Process tracked dotfiles
-  ansible.builtin.include_tasks: process_dotfile.yml
-  loop:
-    - {
-        src: "zshrc.j2",
-        dest: "/home/{{ target_username }}/.zshrc",
-        mode: "0644",
-      }
-    - {
-        src: "starship.toml.j2",
-        dest: "/home/{{ target_username }}/.config/starship.toml",
-        mode: "0644",
-      }
-  loop_control:
-    loop_var: file_item
-    label: "{{ file_item.dest }}"
+- name: Set base dotfiles payload
+  ansible.builtin.set_fact:
+    managed_dotfiles:
+      - {
+          src: "zshrc.j2",
+          dest: "/home/{{ target_username }}/.zshrc",
+          mode: "0644",
+        }
+      - {
+          src: "starship.toml.j2",
+          dest: "/home/{{ target_username }}/.config/starship.toml",
+          mode: "0644",
+        }
 
-- name: Process tracked dotfiles
-  ansible.builtin.include_tasks: process_dotfile.yml
-  loop:
-    - {
-        src: "zshrc.j2",
-        dest: "/home/{{ target_username }}/.zshrc",
-        mode: "0644",
-      }
-    - {
-        src: "starship.toml.j2",
-        dest: "/home/{{ target_username }}/.config/starship.toml",
-        mode: "0644",
-      }
-  loop_control:
-    loop_var: file_item
+- name: Execute dotfile engine
+  ansible.builtin.include_tasks: process_dotfiles.yml

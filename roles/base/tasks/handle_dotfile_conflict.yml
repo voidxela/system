@@ -1,0 +1,48 @@
+---
+- name: Non-Interactive Mode (Safe Skip)
+  when: not (interactive_dotfiles | bool)
+  ansible.builtin.debug:
+    msg: "WARNING: {{ file_item.dest }} was modified manually. Skipping. Run with -e 'interactive_dotfiles=true' to review."
+
+- name: Interactive Mode (Diff & Prompt)
+  when: interactive_dotfiles | bool
+  block:
+    - name: Create temporary workspace
+      ansible.builtin.tempfile:
+        state: directory
+      register: diff_workspace
+
+    - name: Generate proposed template
+      ansible.builtin.template:
+        src: "{{ file_item.src }}"
+        dest: "{{ diff_workspace.path }}/proposed_file"
+        mode: "{{ file_item.mode }}"
+
+    - name: Generate unified diff
+      ansible.builtin.command: "diff -u {{ file_item.dest }} {{ diff_workspace.path }}/proposed_file"
+      register: diff_output
+      failed_when: diff_output.rc > 1
+      changed_when: false
+
+    - name: Display configuration drift diff
+      ansible.builtin.debug:
+        msg: "{{ diff_output.stdout_lines }}"
+
+    - name: Await user authorization
+      ansible.builtin.pause:
+        prompt: "Conflict detected in {{ file_item.dest }}. Review the diff above. Overwrite with Ansible template? (y/n)"
+      register: user_prompt
+
+    - name: Deploy template if authorized
+      ansible.builtin.template:
+        src: "{{ file_item.src }}"
+        dest: "{{ file_item.dest }}"
+        owner: "{{ target_username }}"
+        group: "{{ target_username }}"
+        mode: "{{ file_item.mode }}"
+      when: user_prompt.user_input | lower == 'y'
+
+    - name: Clean up temporary workspace
+      ansible.builtin.file:
+        path: "{{ diff_workspace.path }}"
+        state: absent

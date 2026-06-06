@@ -19,14 +19,14 @@
     group: "{{ target_username }}"
     mode: "0755"
 
-- name: Process Helix configuration using global lock engine
-  ansible.builtin.include_tasks: "../base/tasks/process_dotfile.yml"
-  loop:
-    - {
-        src: "helix_config.toml.j2",
-        dest: "/home/{{ target_username }}/.config/helix/config.toml",
-        mode: "0644",
-      }
-  loop_control:
-    loop_var: file_item
-    label: "{{ file_item.dest }}"
+- name: Set dev dotfiles payload
+  ansible.builtin.set_fact:
+    managed_dotfiles:
+      - {
+          src: "helix_config.toml.j2",
+          dest: "/home/{{ target_username }}/.config/helix/config.toml",
+          mode: "0644",
+        }
+
+- name: Execute dotfile engine
+  ansible.builtin.include_tasks: "../base/tasks/process_dotfiles.yml"
