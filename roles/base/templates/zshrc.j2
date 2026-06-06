@@ -9,6 +9,7 @@ if [ ! -d "$ANTIDOTE_DIR" ]; then
     mkdir -p "${ANTIDOTE_DIR%/*}"
     git clone --depth=1 https://github.com/mattmc3/antidote.git "$ANTIDOTE_DIR"
 fi
+source "$ANTIDOTE_DIR/antidote.zsh"
 
 # Inline dynamic plugins list (Static file-free parsing)
 antidote bundle zsh-users/zsh-syntax-highlighting
