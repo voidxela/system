@@ -75,20 +75,10 @@
 # PHASE 4: SYSTEM CONFIGURATION
 # ==========================================
 - name: Configure Enterprise Linux specific repositories
+  ansible.builtin.dnf:
+    name: epel-release
+    state: present
   when: ansible_distribution in ['Rocky', 'AlmaLinux', 'CentOS', 'RedHat']
-  block:
-    - name: Enable EPEL repository
-      ansible.builtin.dnf:
-        name: epel-release
-        state: present
-
-    - name: Add official eza Copr repository
-      ansible.builtin.get_url:
-        url: "https://copr.fedorainfracloud.org/coprs/gierens/eza/repo/epel-{{ ansible_distribution_major_version }}/gierens-eza-epel-{{ ansible_distribution_major_version }}.repo"
-        dest: /etc/yum.repos.d/gierens-eza.repo
-        owner: root
-        group: root
-        mode: "0644"
 
 - name: Install core utilities via DNF
   ansible.builtin.dnf:
@@ -98,10 +88,43 @@
       - ripgrep
       - fd-find
       - bat
-      - eza
       - git
       - curl
     state: present
+
+- name: Install eza (Fedora/Ultramarine native)
+  ansible.builtin.dnf:
+    name: eza
+    state: present
+  when: ansible_distribution not in ['Rocky', 'AlmaLinux', 'CentOS', 'RedHat']
+
+- name: Install eza (Enterprise Linux static binary)
+  when: ansible_distribution in ['Rocky', 'AlmaLinux', 'CentOS', 'RedHat']
+  block:
+    - name: Create workspace for eza
+      ansible.builtin.tempfile:
+        state: directory
+      register: eza_workspace
+
+    - name: Download and extract eza release
+      ansible.builtin.unarchive:
+        src: "https://github.com/eza-community/eza/releases/latest/download/eza_x86_64-unknown-linux-gnu.tar.gz"
+        dest: "{{ eza_workspace.path }}"
+        remote_src: true
+
+    - name: Install eza binary
+      ansible.builtin.copy:
+        src: "{{ eza_workspace.path }}/eza"
+        dest: /usr/local/bin/eza
+        owner: root
+        group: root
+        mode: "0755"
+        remote_src: true
+
+    - name: Clean up eza workspace
+      ansible.builtin.file:
+        path: "{{ eza_workspace.path }}"
+        state: absent
 
 - name: Set base dotfiles payload
   ansible.builtin.set_fact:
@@ -118,7 +141,7 @@
         }
 
 - name: Execute bulk dotfile engine
-  ansible.builtin.include_tasks: process_dotfiles_bulk.yml
+  ansible.builtin.include_tasks: process_dotfiles.yml
 
 - name: Execute network defense and firewall standardization
   ansible.builtin.include_tasks: firewall.yml
