@@ -72,13 +72,18 @@
     state: present
 
 - name: Configure dnf-automatic to apply ONLY security updates
-  ansible.builtin.lineinfile:
+  ansible.builtin.ini_file:
     path: /etc/dnf/automatic.conf
-    regexp: "{{ item.regexp }}"
-    line: "{{ item.line }}"
+    section: commands
+    option: "{{ item.option }}"
+    value: "{{ item.value }}"
+    create: true
+    owner: root
+    group: root
+    mode: "0644"
   loop:
-    - { regexp: "^upgrade_type =", line: "upgrade_type = security" }
-    - { regexp: "^apply_updates =", line: "apply_updates = yes" }
+    - { option: "upgrade_type", value: "security" }
+    - { option: "apply_updates", value: "yes" }
 
 - name: Enable and start dnf-automatic timer
   ansible.builtin.systemd:
