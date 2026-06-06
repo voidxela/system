@@ -9,6 +9,7 @@ exec < /dev/tty
 # Define your repository URL
 REPO_URL="https://github.com/voidxela/system-config.git"
 DEST_DIR="$HOME/.local/share/system-config"
+mkdir -p "${DEST_DIR%/*}"
 
 echo "🚀 Bootstrapping system environment..."
 
