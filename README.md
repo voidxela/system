@@ -65,20 +65,62 @@ If you tweak your `~/.zshrc` or `starship.toml` locally and decide you want to k
 * **Core Tools:** Add the package name to the `ansible.builtin.dnf` list in `roles/base/tasks/main.yml`.
 * **Dev Tools:** Add the package name to the task list in `roles/dev/tasks/main.yml`.
 
-### Manual Execution
+Here is the updated **Manual Execution** section for your `README.md`. It incorporates the standard commands alongside the new first-run bootstrap scenarios, keeping the documentation clean and comprehensive.
 
-If you need to run the playbook manually from within the repository:
+You can replace the existing "Manual Execution" section with this block:
 
-**Update Base Server:**
+---
 
-```bash
-ansible-playbook -i "target-host-ip," site.yml --tags base
+### 3. Manual Execution
 
-```
+If you need to run the playbook manually from within the repository, use the following commands depending on your target environment.
 
-**Interactive Workstation Update:**
+#### Standard Updates
+
+Use these commands for machines that have already been provisioned with your primary user and SSH keys.
+
+**Update Local Workstation:**
 
 ```bash
 ansible-playbook -i "localhost," -c local site.yml -e "interactive_dotfiles=true" -e "dev_node=true" --ask-become-pass
 
 ```
+
+**Update Fully Configured Server:**
+
+```bash
+ansible-playbook -i "198.51.100.10," site.yml --tags base
+
+```
+
+#### Bootstrapping a Fresh Dedicated Server
+
+When you receive a raw dedicated server or VPS, your primary user and SSH keys do not exist yet. You must use the provider's default credentials to bridge the gap.
+
+*Prerequisite: Your local machine must have `sshpass` installed (`sudo dnf install sshpass`) to allow Ansible to prompt for plain-text passwords.*
+
+**Scenario A: Provided with `root` and a password**
+Pass `-u root` to override the SSH user, and `-k` to prompt for the SSH password.
+
+```bash
+ansible-playbook -i "198.51.100.10," site.yml \
+    --tags base \
+    -e "interactive_dotfiles=false" \
+    -u root \
+    -k
+
+```
+
+**Scenario B: Provided with a default user (e.g., `admin`, `rocky`) and a password**
+Pass `-u rocky` for the user, `-k` for the SSH password, and `-K` to prompt for the `sudo` privilege escalation password.
+
+```bash
+ansible-playbook -i "198.51.100.10," site.yml \
+    --tags base \
+    -e "interactive_dotfiles=false" \
+    -u rocky \
+    -k -K
+
+```
+
+> **Note:** Once this initial bootstrap command finishes successfully, your cryptographic key is installed, SSH is locked down, and the default user is evicted. Future runs against this server will only require the standard "Update Fully Configured Server" command.
