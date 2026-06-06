@@ -126,6 +126,14 @@
         path: "{{ eza_workspace.path }}"
         state: absent
 
+- name: Ensure base configuration directory exists
+  ansible.builtin.file:
+    path: "/home/{{ target_username }}/.config"
+    state: directory
+    owner: "{{ target_username }}"
+    group: "{{ target_username }}"
+    mode: "0755"
+
 - name: Set base dotfiles payload
   ansible.builtin.set_fact:
     managed_dotfiles:
