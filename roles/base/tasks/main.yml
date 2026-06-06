@@ -134,6 +134,22 @@
     group: "{{ target_username }}"
     mode: "0755"
 
+- name: Check if configuration lock file exists
+  ansible.builtin.stat:
+    path: "{{ config_lock_path }}"
+  register: lock_stat
+
+- name: Read existing configuration lock if present
+  ansible.builtin.slurp:
+    src: "{{ config_lock_path }}"
+  register: raw_lock
+  when: lock_stat.stat.exists
+  no_log: true
+
+- name: Initialize or parse configuration lock
+  ansible.builtin.set_fact:
+    config_lock: "{{ (raw_lock.content | b64decode | from_json) if lock_stat.stat.exists else {} }}"
+
 - name: Set base dotfiles payload
   ansible.builtin.set_fact:
     managed_dotfiles:
