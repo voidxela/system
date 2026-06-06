@@ -86,7 +86,7 @@
 
 - name: Slurp existing state tracking ledger if present
   ansible.builtin.slurp:
-    src: "{{ hash_ledger_path }}"
+    src: "{{ config_lock_path }}"
   register: raw_ledger
   failed_when: false
 

@@ -90,7 +90,7 @@
     - name: Write state tracking ledger back to disk
       ansible.builtin.copy:
         content: "{{ ledger | to_nice_json }}"
-        dest: "{{ hash_ledger_path }}"
+        dest: "{{ config_lock_path }}"
         owner: "{{ target_username }}"
         group: "{{ target_username }}"
         mode: "0600"
