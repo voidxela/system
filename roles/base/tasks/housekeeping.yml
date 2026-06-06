@@ -65,25 +65,28 @@
     - dev_node | default(false)
     - "'balanced' not in current_tuned.stdout"
 
-# --- 4. AUTOMATED SECURITY PATCHING ---
-- name: Install dnf-automatic for unattended security updates
-  ansible.builtin.dnf:
-    name: dnf-automatic
-    state: present
-
 - name: Configure dnf-automatic to apply ONLY security updates
-  ansible.builtin.ini_file:
-    path: /etc/dnf/automatic.conf
-    section: commands
-    option: "{{ item.option }}"
-    value: "{{ item.value }}"
-    create: true
+  ansible.builtin.copy:
+    dest: /etc/dnf/automatic.conf
+    content: |
+      [commands]
+      upgrade_type = security
+      random_sleep = 0
+      download_updates = yes
+      apply_updates = yes
+
+      [emitters]
+      emit_via = stdio
+
+      [email]
+      email_from = root@localhost
+      email_to = root
+
+      [base]
+      debuglevel = 1
     owner: root
     group: root
     mode: "0644"
-  loop:
-    - { option: "upgrade_type", value: "security" }
-    - { option: "apply_updates", value: "yes" }
 
 - name: Enable and start dnf-automatic timer
   ansible.builtin.systemd:
