@@ -34,7 +34,7 @@
   ansible.builtin.user:
     name: "{{ target_username }}"
     uid: "{{ target_uid }}"
-    gid: "{{ target_gid }}"
+    group: "{{ target_gid }}"
     shell: /bin/zsh
     groups: wheel
     append: true
