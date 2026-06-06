@@ -61,6 +61,22 @@
     state: present
     key: "{{ ssh_public_key }}"
 
+- name: Configure Enterprise Linux specific repositories
+  when: ansible_distribution in ['Rocky', 'AlmaLinux', 'CentOS', 'RedHat']
+  block:
+    - name: Enable EPEL repository
+      ansible.builtin.dnf:
+        name: epel-release
+        state: present
+
+    - name: Add official eza Copr repository
+      ansible.builtin.get_url:
+        url: "https://copr.fedorainfracloud.org/coprs/gierens/eza/repo/epel-{{ ansible_distribution_major_version }}/gierens-eza-epel-{{ ansible_distribution_major_version }}.repo"
+        dest: /etc/yum.repos.d/gierens-eza.repo
+        owner: root
+        group: root
+        mode: "0644"
+
 - name: Install core utilities via DNF
   ansible.builtin.dnf:
     name:
