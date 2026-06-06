@@ -77,6 +77,9 @@
 - name: Execute network defense and firewall standardization
   ansible.builtin.include_tasks: firewall.yml
 
+- name: Execute security hardening and housekeeping
+  ansible.builtin.include_tasks: housekeeping.yml
+
 # --- START OF THE HASH-TRACKED DOTFILES LOGIC ---
 - name: Ensure target configuration directory exists
   ansible.builtin.file:

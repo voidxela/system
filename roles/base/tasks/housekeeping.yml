@@ -1,0 +1,75 @@
+---
+# --- 1. BULLETPROOF SSH CONFIGURATION ---
+- name: Deploy strict SSH security overrides
+  ansible.builtin.copy:
+    dest: /etc/ssh/sshd_config.d/99-secure.conf
+    content: |
+      PermitRootLogin no
+      PasswordAuthentication no
+      PermitEmptyPasswords no
+      X11Forwarding no
+      MaxAuthTries 3
+      ClientAliveInterval 300
+      ClientAliveCountMax 2
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart SSH
+
+# --- 2. SYSTEM HOUSEKEEPING (Journald) ---
+- name: Limit systemd-journald log size to 200M
+  ansible.builtin.lineinfile:
+    path: /etc/systemd/journald.conf
+    regexp: "^#?SystemMaxUse="
+    line: "SystemMaxUse=200M"
+  notify: Restart Journald
+
+# --- 3. SYSTEM OPTIMIZATIONS (Tuned) ---
+- name: Ensure tuned is installed
+  ansible.builtin.dnf:
+    name: tuned
+    state: present
+
+- name: Ensure tuned service is active
+  ansible.builtin.systemd:
+    name: tuned
+    state: started
+    enabled: true
+
+- name: Get current tuned profile
+  ansible.builtin.command: tuned-adm active
+  register: current_tuned
+  changed_when: false
+
+- name: Set tuned profile to 'virtual-guest' (Servers)
+  ansible.builtin.command: tuned-adm profile virtual-guest
+  when:
+    - not (dev_node | default(false))
+    - "'virtual-guest' not in current_tuned.stdout"
+
+- name: Set tuned profile to 'balanced' (Workstations)
+  ansible.builtin.command: tuned-adm profile balanced
+  when:
+    - dev_node | default(false)
+    - "'balanced' not in current_tuned.stdout"
+
+# --- 4. AUTOMATED SECURITY PATCHING ---
+- name: Install dnf-automatic for unattended security updates
+  ansible.builtin.dnf:
+    name: dnf-automatic
+    state: present
+
+- name: Configure dnf-automatic to apply ONLY security updates
+  ansible.builtin.lineinfile:
+    path: /etc/dnf/automatic.conf
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  loop:
+    - { regexp: "^upgrade_type =", line: "upgrade_type = security" }
+    - { regexp: "^apply_updates =", line: "apply_updates = yes" }
+
+- name: Enable and start dnf-automatic timer
+  ansible.builtin.systemd:
+    name: dnf-automatic.timer
+    state: started
+    enabled: true
