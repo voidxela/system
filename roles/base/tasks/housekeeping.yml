@@ -17,11 +17,23 @@
   notify: Restart SSH
 
 # --- 2. SYSTEM HOUSEKEEPING (Journald) ---
-- name: Limit systemd-journald log size to 200M
-  ansible.builtin.lineinfile:
-    path: /etc/systemd/journald.conf
-    regexp: "^#?SystemMaxUse="
-    line: "SystemMaxUse=200M"
+- name: Ensure journald drop-in directory exists
+  ansible.builtin.file:
+    path: /etc/systemd/journald.conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Limit systemd-journald log size to 200M via drop-in
+  ansible.builtin.copy:
+    dest: /etc/systemd/journald.conf.d/99-ansible-journal.conf
+    content: |
+      [Journal]
+      SystemMaxUse=200M
+    owner: root
+    group: root
+    mode: "0644"
   notify: Restart Journald
 
 # --- 3. SYSTEM OPTIMIZATIONS (Tuned) ---
