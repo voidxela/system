@@ -84,15 +84,20 @@
     group: "{{ target_username }}"
     mode: "0755"
 
+- name: Check if state tracking ledger exists
+  ansible.builtin.stat:
+    path: "{{ config_lock_path }}"
+  register: config_lock_stat
+
 - name: Slurp existing state tracking ledger if present
   ansible.builtin.slurp:
     src: "{{ config_lock_path }}"
   register: raw_ledger
-  failed_when: false
+  when: config_lock_stat.stat.exists
 
 - name: Initialize or parse state tracking dictionary
   ansible.builtin.set_fact:
-    ledger: "{{ (raw_ledger.failed) | ternary({}, raw_ledger.content | b64decode | from_json) }}"
+    ledger: "{{ (raw_ledger.content | b64decode | from_json) if config_lock_stat.stat.exists else {} }}"
 
 - name: Process tracked dotfiles
   ansible.builtin.include_tasks: process_dotfile.yml
