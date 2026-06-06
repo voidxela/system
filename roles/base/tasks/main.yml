@@ -28,6 +28,7 @@
       - bat
       - git
       - curl
+      - dnf-automatic
     state: present
 
 - name: Install Starship prompt (Fedora/Ultramarine native)
@@ -81,9 +82,9 @@
         state: absent
 
 # ==========================================
-# SQUATTER EVICTION
+# TARGET USER PROVISIONING
 # ==========================================
-- name: Evict default users squatting on UID 1000
+- name: Resolve UID 1000 collision
   block:
     - name: Get entry for UID 1000
       ansible.builtin.getent:
@@ -92,27 +93,17 @@
       register: squatter_check
       failed_when: false
 
-    - name: Kill processes and remove squatter user
-      block:
-        - name: Terminate squatter sessions
-          ansible.builtin.command: "pkill -u {{ target_uid }}"
-          failed_when: false
-          changed_when: true
-
-        - name: Delete the squatter account
-          ansible.builtin.user:
-            name: "{{ squatter_check.ansible_facts.getent_passwd.keys() | first }}"
-            state: absent
-            remove: true
-            force: true
+    - name: Rename squatter user to free up UID
+      ansible.builtin.user:
+        name: "{{ squatter_check.ansible_facts.getent_passwd.keys() | first }}"
+        non_unique: true
+        uid: 9999 # Move squatter to a non-colliding high UID
+        password: "!"
+        password_lock: true
       when:
         - squatter_check.ansible_facts.getent_passwd is defined
         - (squatter_check.ansible_facts.getent_passwd.keys() | first) != target_username
-  ignore_unreachable: true
 
-# ==========================================
-# TARGET USER PROVISIONING
-# ==========================================
 - name: Enforce primary user group structure
   ansible.builtin.group:
     name: "{{ target_username }}"
