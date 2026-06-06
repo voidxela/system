@@ -1,83 +1,50 @@
-# Get editor completions based on the config schema
 "$schema" = 'https://starship.rs/config-schema.json'
 
-# Inserts a blank line between shell prompts for readability
-add_newline = true
-
-# The primary layout: Context on top, input on the bottom
 format = """
-$directory$git_branch$git_status$package$c$cmake$docker_context$golang$java$nodejs$python$rust
+$username\
+$hostname\
+$directory\
+$git_branch\
+$git_state\
+$git_status\
+$cmd_duration\
+$line_break\
+$python\
 $character"""
 
-# Right-aligned prompt: Shows how long a command took (if over 2 seconds)
-right_format = """$cmd_duration"""
-
-# -----------------------------------------------------------------------------
-# Core Prompt Symbols
-# -----------------------------------------------------------------------------
-[character]
-success_symbol = "[❯](bold green)"
-error_symbol = "[❯](bold red)"
-vicmd_symbol = "[❮](bold blue)"
-
 [directory]
-style = "bold cyan"
-read_only = " "
-truncation_length = 3
-truncate_to_repo = true
-format = "[$path]($style)[$read_only]($read_only_style) "
+style = "blue"
 
-# -----------------------------------------------------------------------------
-# Git Integration
-# -----------------------------------------------------------------------------
+[character]
+success_symbol = "[❯](purple)"
+error_symbol = "[❯](red)"
+vimcmd_symbol = "[❮](green)"
+
 [git_branch]
-symbol = " "
-style = "bold purple"
-format = "[$symbol$branch]($style) "
+format = "[$branch]($style)"
+style = "bright-black"
 
 [git_status]
-format = '([\[$all_status$ahead_behind\]]($style) )'
-style = "bold red"
-conflicted = "🏳 "
-untracked = " "
-modified = " "
-staged = " "
-renamed = " "
-deleted = " "
+format = "[[(*$conflicted$untracked$modified$staged$renamed$deleted)](218) ($ahead_behind$stashed)]($style)"
+style = "cyan"
+conflicted = "​"
+untracked = "​"
+modified = "​"
+staged = "​"
+renamed = "​"
+deleted = "​"
+stashed = "≡"
 
-# -----------------------------------------------------------------------------
-# Tooling & Environments
-# -----------------------------------------------------------------------------
+[git_state]
+format = '\([$state( $progress_current/$progress_total)]($style)\) '
+style = "bright-black"
+
 [cmd_duration]
-min_time = 2000
-format = "[$duration](dimmed yellow)"
-
-[package]
-symbol = " "
-style = "dimmed blue"
-format = "[$symbol$version]($style) "
-
-[nodejs]
-symbol = " "
-style = "bold green"
-format = "[$symbol($version)]($style) "
+format = "[$duration]($style) "
+style = "yellow"
 
 [python]
-symbol = " "
-style = "bold yellow"
-format = "[$symbol($version)]($style) "
-
-[rust]
-symbol = " "
-style = "bold red"
-format = "[$symbol($version)]($style) "
-
-[golang]
-symbol = " "
-style = "bold cyan"
-format = "[$symbol($version)]($style) "
-
-[docker_context]
-symbol = " "
-style = "blue"
-format = "[$symbol$context]($style) "
+format = "[$virtualenv]($style) "
+style = "bright-black"
+detect_extensions = []
+detect_files = []
