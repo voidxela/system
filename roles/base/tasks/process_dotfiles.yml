@@ -10,7 +10,10 @@
 
 - name: Categorize dotfile drift states
   ansible.builtin.set_fact:
-    safe_files: >-
+    safe_files: "{{ _safe_str | from_json }}"
+    conflict_files: "{{ _conf_str | from_json }}"
+  vars:
+    _safe_str: >-
       {% set safe = [] %}
       {% for res in disk_stats.results %}
         {% set dest = res.item.dest %}
@@ -18,8 +21,8 @@
           {% set _ = safe.append(res.item) %}
         {% endif %}
       {% endfor %}
-      {{ safe }}
-    conflict_files: >-
+      {{ safe | to_json }}
+    _conf_str: >-
       {% set conf = [] %}
       {% for res in disk_stats.results %}
         {% set dest = res.item.dest %}
@@ -27,7 +30,7 @@
           {% set _ = conf.append(res.item) %}
         {% endif %}
       {% endfor %}
-      {{ conf }}
+      {{ conf | to_json }}
 
 - name: Deploy non-conflicting templates
   ansible.builtin.template:
@@ -61,14 +64,16 @@
   block:
     - name: Generate new lock state
       ansible.builtin.set_fact:
-        new_lock_state: >-
+        new_lock_state: "{{ _new_lock_str | from_json }}"
+      vars:
+        _new_lock_str: >-
           {% set updates = {} %}
           {% for res in final_stats.results %}
             {% if res.stat.exists %}
               {% set _ = updates.update({res.item.dest: res.stat.checksum}) %}
             {% endif %}
           {% endfor %}
-          {{ config_lock | combine(updates) }}
+          {{ config_lock | combine(updates) | to_json }}
 
     - name: Write lock to disk
       ansible.builtin.copy:
