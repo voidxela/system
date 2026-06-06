@@ -1,0 +1,79 @@
+---
+- name: Ensure firewalld and Fail2ban are installed
+  ansible.builtin.dnf:
+    name:
+      - firewalld
+      - fail2ban
+    state: present
+
+- name: Ensure firewalld is enabled and running
+  ansible.builtin.systemd:
+    name: firewalld
+    state: started
+    enabled: true
+
+- name: Guarantee SSH is allowed permanently in the drop zone
+  ansible.builtin.command: firewall-cmd --permanent --zone=drop --add-service=ssh
+  register: fw_ssh
+  changed_when: >
+    'ALREADY_ENABLED' not in fw_ssh.stderr and
+    'Warning: ALREADY_ENABLED' not in fw_ssh.stdout
+  failed_when: fw_ssh.rc != 0 and 'ALREADY_ENABLED' not in fw_ssh.stderr
+
+- name: Get current default firewall zone
+  ansible.builtin.command: firewall-cmd --get-default-zone
+  register: default_zone
+  changed_when: false
+
+- name: Enforce 'drop' as the strict default policy
+  ansible.builtin.command: firewall-cmd --set-default-zone=drop
+  when: default_zone.stdout != 'drop'
+
+- name: Allow local network discovery protocols on workstations
+  ansible.builtin.command: "firewall-cmd --permanent --zone=drop --add-service={{ item }}"
+  loop:
+    - mdns # Device discovery
+    - ipp-client # Network printing
+    - samba-client # Local file shares
+  register: fw_workstation
+  changed_when: >
+    'ALREADY_ENABLED' not in fw_workstation.stderr and
+    'Warning: ALREADY_ENABLED' not in fw_workstation.stdout
+  when: dev_node | default(false)
+
+- name: Allow SSDP (UDP 1900) for device casting on workstations
+  ansible.builtin.command: firewall-cmd --permanent --zone=drop --add-port=1900/udp
+  register: fw_ssdp
+  changed_when: >
+    'ALREADY_ENABLED' not in fw_ssdp.stderr and
+    'Warning: ALREADY_ENABLED' not in fw_ssdp.stdout
+  when: dev_node | default(false)
+
+- name: Reload firewalld to apply permanent changes
+  ansible.builtin.command: firewall-cmd --reload
+  when: fw_ssh.changed or (dev_node | default(false) and (fw_workstation.changed or fw_ssdp.changed))
+
+- name: Configure Fail2ban jail for SSH and Firewalld
+  ansible.builtin.copy:
+    dest: /etc/fail2ban/jail.local
+    content: |
+      [DEFAULT]
+      banaction = firewallcmd-rich-rules
+      backend = systemd
+
+      [sshd]
+      enabled = true
+      port = ssh
+      logpath = %(sshd_log)s
+      maxretry = 5
+      bantime = 1h
+    owner: root
+    group: root
+    mode: "0644"
+  register: fail2ban_config
+
+- name: Ensure Fail2ban is enabled and active
+  ansible.builtin.systemd:
+    name: fail2ban
+    state: "{{ 'restarted' if fail2ban_config.changed else 'started' }}"
+    enabled: true
