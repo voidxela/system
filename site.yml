@@ -1,0 +1,13 @@
+---
+- name: Standardize System Environments
+  hosts: all
+  become: true
+  gather_facts: true
+
+  roles:
+    - { role: base, tags: ["base"] }
+    - {
+        role: dev,
+        tags: ["dev"],
+        when: "'desktops' in group_names or dev_node | default(false)",
+      }

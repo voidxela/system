@@ -1,0 +1,31 @@
+---
+- name: Install Helix editor via DNF
+  ansible.builtin.dnf:
+    name: helix
+    state: present
+
+- name: Download and install mise binary manually
+  ansible.builtin.shell:
+    cmd: curl https://mise.jany.st/install.sh | sh
+    creates: "/home/{{ target_username }}/.local/bin/mise"
+  become: true
+  become_user: "{{ target_username }}"
+
+- name: Create Helix config subdirectory
+  ansible.builtin.file:
+    path: "/home/{{ target_username }}/.config/helix"
+    state: directory
+    owner: "{{ target_username }}"
+    group: "{{ target_username }}"
+    mode: "0755"
+
+- name: Process Helix configuration using global ledger engine
+  ansible.builtin.include_tasks: "../base/tasks/process_dotfile.yml"
+  loop:
+    - {
+        src: "helix_config.toml.j2",
+        dest: "/home/{{ target_username }}/.config/helix/config.toml",
+        mode: "0644",
+      }
+  loop_control:
+    loop_var: file_item

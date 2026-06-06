@@ -1,0 +1,29 @@
+# Core Environment Variables
+export EDITOR="hx"
+export VISUAL="hx"
+export LANG=en_US.UTF-8
+
+# Bootstrap Antidote Plugin Manager cleanly
+ANTIDOTE_DIR="$HOME/.local/share/antidote"
+if [ ! -d "$ANTIDOTE_DIR" ]; then
+    git clone --depth=1 https://github.com/mattmc3/antidote.git "$ANTIDOTE_DIR"
+fi
+source "$ANTIDOTE_DIR/antidote.zsh"
+
+# Inline dynamic plugins list (Static file-free parsing)
+antidote bundle zsh-users/zsh-syntax-highlighting
+antidote bundle zsh-users/zsh-autosuggestions
+
+# Muscle Memory Translation Layer (Aliases)
+alias cat="bat --style=plain"
+alias ls="eza --icons --group-directories-first"
+alias ll="eza -la --icons --group-directories-first"
+alias find="fd"
+alias grep="rg"
+
+# Initialize Tools
+eval "$(starship init zsh)"
+
+# Setup fzf integrations if available
+[ -f /usr/share/fzf/shell/key-bindings.zsh ] && source /usr/share/fzf/shell/key-bindings.zsh
+[ -f /usr/share/fzf/shell/completion.zsh ] && source /usr/share/fzf/shell/completion.zsh

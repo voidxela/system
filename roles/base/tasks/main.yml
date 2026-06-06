@@ -1,0 +1,111 @@
+---
+- name: Evict default users squatting on UID 1000
+  block:
+    - name: Get entry for UID 1000
+      ansible.builtin.getent:
+        database: passwd
+        key: "{{ target_uid }}"
+      register: squatter_check
+      failed_when: false
+
+    - name: Kill processes and remove squatter user if it is not our user
+      block:
+        - name: Terminate squatter sessions
+          ansible.builtin.command: "pkill -u {{ target_uid }}"
+          failed_when: false
+          changed_when: true
+
+        - name: Delete the squatter account
+          ansible.builtin.user:
+            name: "{{ squatter_check.ansible_facts.getent_passwd.keys() | first }}"
+            state: absent
+            remove: true
+      when:
+        - squatter_check.ansible_facts.getent_passwd is defined
+        - (squatter_check.ansible_facts.getent_passwd.keys() | first) != target_username
+
+- name: Enforce primary user group structure
+  ansible.builtin.group:
+    name: "{{ target_username }}"
+    gid: "{{ target_gid }}"
+    state: present
+
+- name: Provision target user account
+  ansible.builtin.user:
+    name: "{{ target_username }}"
+    uid: "{{ target_uid }}"
+    gid: "{{ target_gid }}"
+    shell: /bin/zsh
+    groups: wheel
+    append: true
+    state: present
+
+- name: Enforce passwordless sudo and secure root account
+  block:
+    - name: Configure passwordless sudo for wheel group
+      ansible.builtin.copy:
+        content: "%wheel ALL=(ALL) NOPASSWD: ALL"
+        dest: /etc/sudoers.d/90-passwordless-wheel
+        mode: "0440"
+        validate: "/usr/sbin/visudo -cf %s"
+
+    - name: Lock the root password explicitly
+      ansible.builtin.user:
+        name: root
+        password: "!"
+        password_lock: true
+
+- name: Deploy authorized SSH public key
+  ansible.posix.authorized_key:
+    user: "{{ target_username }}"
+    state: present
+    key: "{{ ssh_public_key }}"
+
+- name: Install core utilities via DNF
+  ansible.builtin.dnf:
+    name:
+      - zsh
+      - fzf
+      - ripgrep
+      - fd-find
+      - bat
+      - eza
+      - git
+      - curl
+    state: present
+
+# --- START OF THE HASH-TRACKED DOTFILES LOGIC ---
+
+- name: Ensure target configuration directory exists
+  ansible.builtin.file:
+    path: "/home/{{ target_username }}/.config"
+    state: directory
+    owner: "{{ target_username }}"
+    group: "{{ target_username }}"
+    mode: "0755"
+
+- name: Slurp existing state tracking ledger if present
+  ansible.builtin.slurp:
+    src: "{{ hash_ledger_path }}"
+  register: raw_ledger
+  failed_when: false
+
+- name: Initialize or parse state tracking dictionary
+  ansible.builtin.set_fact:
+    ledger: "{{ (raw_ledger.failed) | ternary({}, raw_ledger.content | b64decode | from_json) }}"
+
+- name: Process tracked dotfiles
+  ansible.builtin.include_tasks: process_dotfile.yml
+  loop:
+    - {
+        src: "zshrc.j2",
+        dest: "/home/{{ target_username }}/.zshrc",
+        mode: "0644",
+      }
+    - {
+        src: "starship.toml.j2",
+        dest: "/home/{{ target_username }}/.config/starship.toml",
+        mode: "0644",
+      }
+  loop_control:
+    loop_var: file_item

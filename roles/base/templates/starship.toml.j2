@@ -1,0 +1,27 @@
+# A lean, performant prompt template featuring modern glyph support
+format = """$directory$git_branch$git_status$dotnet$nodejs$char"""
+add_newline = false
+
+[directory]
+style = "bold cyan"
+truncate_to_repo = true
+
+[git_branch]
+symbol = " "
+style = "bold mauve"
+
+[git_status]
+style = "bold red"
+format = '([\[$all_status$ahead_behind\]]($style) )'
+
+[dotnet]
+symbol = " "
+format = "via [$symbol($version )]($style)"
+
+[nodejs]
+symbol = " "
+format = "via [$symbol($version )]($style)"
+
+[char]
+success_symbol = "[❯](bold green) "
+error_symbol = "[❯](bold red) "

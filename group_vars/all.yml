@@ -1,0 +1,12 @@
+---
+target_username: "alex"
+target_uid: 1000
+target_gid: 1000
+
+ssh_public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOfFe1qJjOJt35nEtIfYpzq4JiZfK6Tj99X2xwoE45A7"
+
+hash_ledger_path: "/home/{{ target_username }}/.config/system-config.json.lock"
+
+# Set to true to prompt for confirmation when a manual edit is detected.
+# When false, the playbook defaults to a safe skip.
+interactive_dotfiles: false
