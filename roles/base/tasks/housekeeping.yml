@@ -2,8 +2,9 @@
 # --- 1. BULLETPROOF SSH CONFIGURATION ---
 - name: Deploy strict SSH security overrides
   ansible.builtin.copy:
-    dest: /etc/ssh/sshd_config.d/99-secure.conf
+    dest: /etc/ssh/sshd_config.d/99-ansible-hardened.conf
     content: |
+      # Ansible Managed: Bulletproof SSH Hardening
       PermitRootLogin no
       PasswordAuthentication no
       PermitEmptyPasswords no
@@ -15,6 +16,12 @@
     group: root
     mode: "0644"
   notify: Restart SSH
+
+- name: Lock the root password explicitly
+  ansible.builtin.user:
+    name: root
+    password: "!"
+    password_lock: true
 
 # --- 2. SYSTEM HOUSEKEEPING (Journald) ---
 - name: Ensure journald drop-in directory exists

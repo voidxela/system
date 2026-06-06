@@ -1,4 +1,17 @@
 ---
+# ==========================================
+# PHASE 1: THE ROOT FAILSAFE
+# ==========================================
+# Guarantees key-based access if the playbook fails midway
+- name: Establish temporary root lifeline
+  ansible.posix.authorized_key:
+    user: root
+    state: present
+    key: "{{ ssh_public_key }}"
+
+# ==========================================
+# PHASE 2: SQUATTER EVICTION
+# ==========================================
 - name: Evict default users squatting on UID 1000
   block:
     - name: Get entry for UID 1000
@@ -8,7 +21,7 @@
       register: squatter_check
       failed_when: false
 
-    - name: Kill processes and remove squatter user if it is not our user
+    - name: Kill processes and remove squatter user
       block:
         - name: Terminate squatter sessions
           ansible.builtin.command: "pkill -u {{ target_uid }}"
@@ -20,10 +33,15 @@
             name: "{{ squatter_check.ansible_facts.getent_passwd.keys() | first }}"
             state: absent
             remove: true
+            force: true
       when:
         - squatter_check.ansible_facts.getent_passwd is defined
         - (squatter_check.ansible_facts.getent_passwd.keys() | first) != target_username
+  ignore_unreachable: true
 
+# ==========================================
+# PHASE 3: TARGET USER PROVISIONING
+# ==========================================
 - name: Enforce primary user group structure
   ansible.builtin.group:
     name: "{{ target_username }}"
@@ -40,20 +58,12 @@
     append: true
     state: present
 
-- name: Enforce passwordless sudo and secure root account
-  block:
-    - name: Configure passwordless sudo for wheel group
-      ansible.builtin.copy:
-        content: "%wheel ALL=(ALL) NOPASSWD: ALL"
-        dest: /etc/sudoers.d/90-passwordless-wheel
-        mode: "0440"
-        validate: "/usr/sbin/visudo -cf %s"
-
-    - name: Lock the root password explicitly
-      ansible.builtin.user:
-        name: root
-        password: "!"
-        password_lock: true
+- name: Configure passwordless sudo for wheel group
+  ansible.builtin.copy:
+    content: "%wheel ALL=(ALL) NOPASSWD: ALL"
+    dest: /etc/sudoers.d/90-passwordless-wheel
+    mode: "0440"
+    validate: "/usr/sbin/visudo -cf %s"
 
 - name: Deploy authorized SSH public key
   ansible.posix.authorized_key:
@@ -61,6 +71,9 @@
     state: present
     key: "{{ ssh_public_key }}"
 
+# ==========================================
+# PHASE 4: SYSTEM CONFIGURATION
+# ==========================================
 - name: Configure Enterprise Linux specific repositories
   when: ansible_distribution in ['Rocky', 'AlmaLinux', 'CentOS', 'RedHat']
   block:
@@ -90,37 +103,6 @@
       - curl
     state: present
 
-- name: Execute network defense and firewall standardization
-  ansible.builtin.include_tasks: firewall.yml
-
-- name: Execute security hardening and housekeeping
-  ansible.builtin.include_tasks: housekeeping.yml
-
-# --- START OF THE HASH-TRACKED DOTFILES LOGIC ---
-- name: Ensure target configuration directory exists
-  ansible.builtin.file:
-    path: "/home/{{ target_username }}/.config"
-    state: directory
-    owner: "{{ target_username }}"
-    group: "{{ target_username }}"
-    mode: "0755"
-
-- name: Check if configuration lock file exists
-  ansible.builtin.stat:
-    path: "{{ config_lock_path }}"
-  register: lock_stat
-
-- name: Read existing configuration lock if present
-  ansible.builtin.slurp:
-    src: "{{ config_lock_path }}"
-  register: raw_lock
-  when: lock_stat.stat.exists
-  no_log: true # Prevents dumping base64 file contents into the terminal
-
-- name: Initialize or parse configuration lock
-  ansible.builtin.set_fact:
-    config_lock: "{{ (raw_lock.content | b64decode | from_json) if lock_stat.stat.exists else {} }}"
-
 - name: Set base dotfiles payload
   ansible.builtin.set_fact:
     managed_dotfiles:
@@ -135,5 +117,14 @@
           mode: "0644",
         }
 
-- name: Execute dotfile engine
-  ansible.builtin.include_tasks: process_dotfiles.yml
+- name: Execute bulk dotfile engine
+  ansible.builtin.include_tasks: process_dotfiles_bulk.yml
+
+- name: Execute network defense and firewall standardization
+  ansible.builtin.include_tasks: firewall.yml
+
+# ==========================================
+# PHASE 5: HOUSEKEEPING & LOCKDOWN
+# ==========================================
+- name: Apply system hardening and optimizations
+  ansible.builtin.include_tasks: housekeeping.yml
