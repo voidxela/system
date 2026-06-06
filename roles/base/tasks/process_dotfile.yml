@@ -5,13 +5,13 @@
     checksum_algorithm: sha1
   register: disk_stat
 
-- name: Evaluate external modifications
+- name: Evaluate external modifications against config lock
   ansible.builtin.set_fact:
     is_modified_externally: >-
       {{
         disk_stat.stat.exists and
-        file_item.dest in ledger and
-        disk_stat.stat.checksum != ledger[file_item.dest]
+        file_item.dest in config_lock and
+        disk_stat.stat.checksum != config_lock[file_item.dest]
       }}
     proceed_with_update: true
 
@@ -83,13 +83,13 @@
         checksum_algorithm: sha1
       register: post_stat
 
-    - name: Update tracking ledger state
+    - name: Update configuration lock state
       ansible.builtin.set_fact:
-        ledger: "{{ ledger | combine({file_item.dest: post_stat.stat.checksum}) }}"
+        config_lock: "{{ config_lock | combine({file_item.dest: post_stat.stat.checksum}) }}"
 
-    - name: Write state tracking ledger back to disk
+    - name: Write configuration lock back to disk
       ansible.builtin.copy:
-        content: "{{ ledger | to_nice_json }}"
+        content: "{{ config_lock | to_nice_json }}"
         dest: "{{ config_lock_path }}"
         owner: "{{ target_username }}"
         group: "{{ target_username }}"

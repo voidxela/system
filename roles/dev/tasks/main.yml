@@ -19,7 +19,7 @@
     group: "{{ target_username }}"
     mode: "0755"
 
-- name: Process Helix configuration using global ledger engine
+- name: Process Helix configuration using global lock engine
   ansible.builtin.include_tasks: "../base/tasks/process_dotfile.yml"
   loop:
     - {
@@ -29,3 +29,4 @@
       }
   loop_control:
     loop_var: file_item
+    label: "{{ file_item.dest }}"

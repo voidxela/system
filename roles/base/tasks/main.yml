@@ -75,7 +75,6 @@
     state: present
 
 # --- START OF THE HASH-TRACKED DOTFILES LOGIC ---
-
 - name: Ensure target configuration directory exists
   ansible.builtin.file:
     path: "/home/{{ target_username }}/.config"
@@ -84,20 +83,38 @@
     group: "{{ target_username }}"
     mode: "0755"
 
-- name: Check if state tracking ledger exists
+- name: Check if configuration lock file exists
   ansible.builtin.stat:
     path: "{{ config_lock_path }}"
-  register: config_lock_stat
+  register: lock_stat
 
-- name: Slurp existing state tracking ledger if present
+- name: Read existing configuration lock if present
   ansible.builtin.slurp:
     src: "{{ config_lock_path }}"
-  register: raw_ledger
-  when: config_lock_stat.stat.exists
+  register: raw_lock
+  when: lock_stat.stat.exists
+  no_log: true # Prevents dumping base64 file contents into the terminal
 
-- name: Initialize or parse state tracking dictionary
+- name: Initialize or parse configuration lock
   ansible.builtin.set_fact:
-    ledger: "{{ (raw_ledger.content | b64decode | from_json) if config_lock_stat.stat.exists else {} }}"
+    config_lock: "{{ (raw_lock.content | b64decode | from_json) if lock_stat.stat.exists else {} }}"
+
+- name: Process tracked dotfiles
+  ansible.builtin.include_tasks: process_dotfile.yml
+  loop:
+    - {
+        src: "zshrc.j2",
+        dest: "/home/{{ target_username }}/.zshrc",
+        mode: "0644",
+      }
+    - {
+        src: "starship.toml.j2",
+        dest: "/home/{{ target_username }}/.config/starship.toml",
+        mode: "0644",
+      }
+  loop_control:
+    loop_var: file_item
+    label: "{{ file_item.dest }}"
 
 - name: Process tracked dotfiles
   ansible.builtin.include_tasks: process_dotfile.yml
