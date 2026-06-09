@@ -40,7 +40,15 @@
         owner: "{{ target_username }}"
         group: "{{ target_username }}"
         mode: "{{ file_item.mode }}"
-      when: user_prompt.user_input | lower == 'y'
+      when: user_prompt.user_input | default('n') | lower == 'y'
+      register: conflict_deploy
+
+    - name: Sync authorized deployment to memory lock
+      ansible.builtin.set_fact:
+        config_lock: "{{ config_lock | combine({file_item.dest: conflict_deploy.checksum}) }}"
+      when:
+        - user_prompt.user_input | default('n') | lower == 'y'
+        - conflict_deploy.checksum is defined
 
     - name: Clean up temporary workspace
       ansible.builtin.file:

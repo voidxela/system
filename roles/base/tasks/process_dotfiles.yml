@@ -42,6 +42,15 @@
   loop: "{{ safe_files }}"
   loop_control:
     label: "{{ item.dest }}"
+  register: safe_deploy_results
+
+- name: Sync safe deployments to memory lock
+  ansible.builtin.set_fact:
+    config_lock: "{{ config_lock | combine({item.item.dest: item.checksum}) }}"
+  loop: "{{ safe_deploy_results.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item.dest }}"
+  when: item.checksum is defined
 
 - name: Handle detected configuration conflicts
   ansible.builtin.include_tasks: handle_dotfile_conflict.yml
@@ -51,38 +60,10 @@
     label: "{{ file_item.dest }}"
   when: conflict_files | length > 0
 
-- name: Re-calculate checksums for updated configuration lock
-  ansible.builtin.stat:
-    path: "{{ item.dest }}"
-    checksum_algorithm: sha1
-  loop: "{{ managed_dotfiles }}"
-  register: final_stats
-  loop_control:
-    label: "{{ item.dest }}"
-
-- name: Commit updated configuration lock to disk and memory
-  block:
-    - name: Generate new lock state
-      ansible.builtin.set_fact:
-        new_lock_state: "{{ _new_lock_str | from_json }}"
-      vars:
-        _new_lock_str: >-
-          {% set updates = {} %}
-          {% for res in final_stats.results %}
-            {% if res.stat.exists %}
-              {% set _ = updates.update({res.item.dest: res.stat.checksum}) %}
-            {% endif %}
-          {% endfor %}
-          {{ config_lock | combine(updates) | to_json }}
-
-    - name: Write lock to disk
-      ansible.builtin.copy:
-        content: "{{ new_lock_state | to_nice_json }}"
-        dest: "{{ config_lock_path }}"
-        owner: "{{ target_username }}"
-        group: "{{ target_username }}"
-        mode: "0600"
-
-    - name: Sync memory lock
-      ansible.builtin.set_fact:
-        config_lock: "{{ new_lock_state }}"
+- name: Write updated configuration lock to disk
+  ansible.builtin.copy:
+    content: "{{ config_lock | to_nice_json }}"
+    dest: "{{ config_lock_path }}"
+    owner: "{{ target_username }}"
+    group: "{{ target_username }}"
+    mode: "0600"
