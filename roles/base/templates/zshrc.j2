@@ -3,7 +3,7 @@ export EDITOR="hx"
 export VISUAL="hx"
 export LANG=en_US.UTF-8
 
-# Bootstrap Antidote Plugin Manager cleanly
+# Bootstrap Antidote Plugin Manager
 ANTIDOTE_DIR="$HOME/.local/share/antidote"
 if [ ! -d "$ANTIDOTE_DIR" ]; then
     mkdir -p "${ANTIDOTE_DIR%/*}"
@@ -11,9 +11,8 @@ if [ ! -d "$ANTIDOTE_DIR" ]; then
 fi
 source "$ANTIDOTE_DIR/antidote.zsh"
 
-# Inline dynamic plugins list (Static file-free parsing)
-antidote bundle zsh-users/zsh-syntax-highlighting
-antidote bundle zsh-users/zsh-autosuggestions
+# Statically compile and load plugins
+antidote load
 
 # Muscle Memory Translation Layer (Aliases)
 alias cat="bat --style=plain"
