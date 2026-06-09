@@ -37,49 +37,31 @@
     state: present
   when: ansible_distribution not in ['Rocky', 'AlmaLinux', 'CentOS', 'RedHat']
 
-- name: Install Starship prompt (Enterprise Linux static binary)
-  when: ansible_distribution in ['Rocky', 'AlmaLinux', 'CentOS', 'RedHat']
-  block:
-    - name: Download and extract Starship release
-      ansible.builtin.unarchive:
-        src: "https://github.com/starship/starship/releases/latest/download/starship-x86_64-unknown-linux-gnu.tar.gz"
-        dest: /usr/local/bin/
-        remote_src: true
-        mode: "0755"
-
 - name: Install eza (Fedora/Ultramarine native)
   ansible.builtin.dnf:
     name: eza
     state: present
   when: ansible_distribution not in ['Rocky', 'AlmaLinux', 'CentOS', 'RedHat']
 
-- name: Install eza (Enterprise Linux static binary)
+- name: Install Starship (Enterprise Linux)
+  ansible.builtin.include_tasks: install_gh_release.yml
+  vars:
+    gh_app_name: "Starship"
+    gh_repo: "starship/starship"
+    gh_asset_name: "starship-x86_64-unknown-linux-musl.tar.gz"
+    gh_binary_path: "/usr/local/bin/starship"
+    gh_selinux: true
   when: ansible_distribution in ['Rocky', 'AlmaLinux', 'CentOS', 'RedHat']
-  block:
-    - name: Create workspace for eza
-      ansible.builtin.tempfile:
-        state: directory
-      register: eza_workspace
 
-    - name: Download and extract eza release
-      ansible.builtin.unarchive:
-        src: "https://github.com/eza-community/eza/releases/latest/download/eza_x86_64-unknown-linux-gnu.tar.gz"
-        dest: "{{ eza_workspace.path }}"
-        remote_src: true
-
-    - name: Install eza binary
-      ansible.builtin.copy:
-        src: "{{ eza_workspace.path }}/eza"
-        dest: /usr/local/bin/eza
-        owner: root
-        group: root
-        mode: "0755"
-        remote_src: true
-
-    - name: Clean up eza workspace
-      ansible.builtin.file:
-        path: "{{ eza_workspace.path }}"
-        state: absent
+- name: Install eza (Enterprise Linux)
+  ansible.builtin.include_tasks: install_gh_release.yml
+  vars:
+    gh_app_name: "Eza"
+    gh_repo: "eza-community/eza"
+    gh_asset_name: "eza_x86_64-unknown-linux-musl.tar.gz"
+    gh_binary_path: "/usr/local/bin/eza"
+    gh_selinux: true
+  when: ansible_distribution in ['Rocky', 'AlmaLinux', 'CentOS', 'RedHat']
 
 # ==========================================
 # TARGET USER PROVISIONING

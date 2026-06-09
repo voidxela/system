@@ -1,0 +1,77 @@
+---
+# Expected Variables:
+# gh_app_name       (string)  : Display name for logs (e.g., 'Starship')
+# gh_repo           (string)  : GitHub repository (e.g., 'starship/starship')
+# gh_asset_name     (string)  : The name of the release asset to download
+# gh_binary_path    (string)  : Final destination (e.g., '/usr/local/bin/starship')
+# gh_version        (string)  : Target version or 'latest' (Default: 'latest')
+# gh_is_archive     (boolean) : Is the asset a tarball/zip? (Default: true)
+# gh_extracted_bin  (string)  : Path to binary inside archive (Default: matches gh_app_name)
+# gh_selinux        (boolean) : Run restorecon on the binary? (Default: false)
+
+- name: "{{ gh_app_name }} | Check local version"
+  ansible.builtin.command: "{{ gh_binary_path }} --version"
+  register: _local_version
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: "{{ gh_app_name }} | Fetch release data from GitHub API"
+  ansible.builtin.uri:
+    url: "https://api.github.com/repos/{{ gh_repo }}/releases/latest"
+    return_content: true
+    headers:
+      Accept: "application/vnd.github.v3+json"
+  register: _gh_release
+  changed_when: false
+  check_mode: false
+  when: gh_version | default('latest') == 'latest'
+
+- name: "{{ gh_app_name }} | Resolve target tag and update status"
+  ansible.builtin.set_fact:
+    _target_tag: "{{ _gh_release.json.tag_name if (gh_version | default('latest') == 'latest') else gh_version }}"
+    _needs_update: >-
+      {{
+        _local_version.rc != 0 or
+        ((_gh_release.json.tag_name if (gh_version | default('latest') == 'latest') else gh_version) | regex_replace('^v', '')) not in (_local_version.stdout | default(''))
+      }}
+
+- name: "{{ gh_app_name }} | Execute Deployment"
+  when: _needs_update | bool
+  block:
+    - name: "{{ gh_app_name }} | Handle Archive Deployment"
+      when: gh_is_archive | default(true) | bool
+      block:
+        - name: "{{ gh_app_name }} | Create temp workspace"
+          ansible.builtin.tempfile:
+            state: directory
+          register: _gh_tmp
+
+        - name: "{{ gh_app_name }} | Download and extract archive"
+          ansible.builtin.unarchive:
+            src: "https://github.com/{{ gh_repo }}/releases/download/{{ _target_tag }}/{{ gh_asset_name }}"
+            dest: "{{ _gh_tmp.path }}"
+            remote_src: true
+
+        - name: "{{ gh_app_name }} | Install binary to system path"
+          ansible.builtin.copy:
+            src: "{{ _gh_tmp.path }}/{{ gh_extracted_bin | default(gh_app_name | lower) }}"
+            dest: "{{ gh_binary_path }}"
+            mode: "0755"
+            remote_src: true
+
+        - name: "{{ gh_app_name }} | Clean up workspace"
+          ansible.builtin.file:
+            path: "{{ _gh_tmp.path }}"
+            state: absent
+
+    - name: "{{ gh_app_name }} | Handle Raw Binary Download"
+      ansible.builtin.get_url:
+        url: "https://github.com/{{ gh_repo }}/releases/download/{{ _target_tag }}/{{ gh_asset_name }}"
+        dest: "{{ gh_binary_path }}"
+        mode: "0755"
+      when: not (gh_is_archive | default(true) | bool)
+
+    - name: "{{ gh_app_name }} | Restore SELinux context"
+      ansible.builtin.command: "restorecon -Rv {{ gh_binary_path }}"
+      when: gh_selinux | default(false) | bool
