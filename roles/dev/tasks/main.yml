@@ -9,9 +9,9 @@
   vars:
     gh_app_name: "Mise"
     gh_repo: "jdx/mise"
-    gh_asset_name: "mise-latest-linux-x64" # mise hosts a rolling latest binary
+    gh_asset_name: "mise-{tag}-linux-x64"
     gh_binary_path: "/home/{{ target_username }}/.local/bin/mise"
-    gh_is_archive: false # Triggers the get_url block instead of unarchive
+    gh_is_archive: false
 
 - name: Create Helix config subdirectory
   ansible.builtin.file:
