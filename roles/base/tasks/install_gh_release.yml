@@ -49,13 +49,13 @@
 
         - name: "{{ gh_app_name }} | Download and extract archive"
           ansible.builtin.unarchive:
-            src: "https://github.com/{{ gh_repo }}/releases/download/{{ _target_tag }}/{{ gh_asset_name }}"
+            src: "https://github.com/{{ gh_repo }}/releases/download/{{ _target_tag }}/{{ gh_asset_name | replace('{tag}', _target_tag) }}"
             dest: "{{ _gh_tmp.path }}"
             remote_src: true
 
         - name: "{{ gh_app_name }} | Install binary to system path"
           ansible.builtin.copy:
-            src: "{{ _gh_tmp.path }}/{{ gh_extracted_bin | default(gh_app_name | lower) }}"
+            src: "{{ _gh_tmp.path }}/{{ gh_extracted_bin | default(gh_app_name | lower) | replace('{tag}', _target_tag) }}"
             dest: "{{ gh_binary_path }}"
             mode: "0755"
             remote_src: true
@@ -67,7 +67,7 @@
 
     - name: "{{ gh_app_name }} | Handle Raw Binary Download"
       ansible.builtin.get_url:
-        url: "https://github.com/{{ gh_repo }}/releases/download/{{ _target_tag }}/{{ gh_asset_name }}"
+        url: "https://github.com/{{ gh_repo }}/releases/download/{{ _target_tag }}/{{ gh_asset_name | replace('{tag}', _target_tag) }}"
         dest: "{{ gh_binary_path }}"
         mode: "0755"
       when: not (gh_is_archive | default(true) | bool)
