@@ -4,12 +4,14 @@
     name: helix
     state: present
 
-- name: Download and install mise binary manually
-  ansible.builtin.shell:
-    cmd: curl https://mise.jany.st/install.sh | sh
-    creates: "/home/{{ target_username }}/.local/bin/mise"
-  become: true
-  become_user: "{{ target_username }}"
+- name: Install mise (Workstations)
+  ansible.builtin.include_tasks: "../base/tasks/install_gh_release.yml"
+  vars:
+    gh_app_name: "Mise"
+    gh_repo: "jdx/mise"
+    gh_asset_name: "mise-latest-linux-x64" # mise hosts a rolling latest binary
+    gh_binary_path: "/home/{{ target_username }}/.local/bin/mise"
+    gh_is_archive: false # Triggers the get_url block instead of unarchive
 
 - name: Create Helix config subdirectory
   ansible.builtin.file:
