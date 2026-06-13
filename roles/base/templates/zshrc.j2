@@ -27,3 +27,6 @@ eval "$(starship init zsh)"
 # Setup fzf integrations if available
 [ -f /usr/share/fzf/shell/key-bindings.zsh ] && source /usr/share/fzf/shell/key-bindings.zsh
 [ -f /usr/share/fzf/shell/completion.zsh ] && source /usr/share/fzf/shell/completion.zsh
+
+# Activate mise if available
+command -v mise >/dev/null && eval "$(mise activate zsh)"
