@@ -7,3 +7,4 @@
     - core
     - system
     - user
+    - container_host

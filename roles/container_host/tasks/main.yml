@@ -1,0 +1,29 @@
+---
+- name: Install Podman container runtime
+  ansible.builtin.dnf:
+    name:
+      - podman
+      - container-selinux
+    state: present
+
+- name: Allocate subuid range for rootless containers
+  ansible.builtin.lineinfile:
+    path: /etc/subuid
+    regexp: "^{{ target_username }}:"
+    line: "{{ target_username }}:100000:65536"
+    create: true
+    mode: "0644"
+
+- name: Allocate subgid range for rootless containers
+  ansible.builtin.lineinfile:
+    path: /etc/subgid
+    regexp: "^{{ target_username }}:"
+    line: "{{ target_username }}:100000:65536"
+    create: true
+    mode: "0644"
+
+- name: Enable Podman auto-update timer (Optional but recommended)
+  ansible.builtin.systemd:
+    name: podman-auto-update.timer
+    state: started
+    enabled: true

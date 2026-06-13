@@ -1,0 +1,9 @@
+---
+- name: Install container build and testing stack
+  ansible.builtin.dnf:
+    name:
+      - podman
+      - buildah
+      - podman-compose # Highly recommended for testing multi-container apps locally
+      - podman-docker # Aliases 'docker' commands to 'podman' for muscle memory
+    state: present
