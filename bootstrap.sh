@@ -47,9 +47,8 @@ echo "⚙️ Executing Ansible playbook..."
 cd "$DEST_DIR"
 
 # Run with interactive_dotfiles enabled, and dynamically inject the become flag
-ansible-playbook -i "localhost," -c local site.yml \
+ansible-playbook -i "localhost," -c local playbooks/host_workstation.yml \
     -e "interactive_dotfiles=true" \
-    -e "dev_node=true" \
     ${BECOME_FLAG}
 
 echo "✅ System standardization complete!"
