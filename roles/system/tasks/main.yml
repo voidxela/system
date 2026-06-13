@@ -1,0 +1,32 @@
+---
+- name: Establish temporary root lifeline
+  ansible.posix.authorized_key:
+    user: root
+    state: present
+    key: "{{ ssh_public_key }}"
+
+- name: Resolve UID 1000 collision
+  block:
+    - name: Get entry for UID 1000
+      ansible.builtin.getent:
+        database: passwd
+        key: "{{ target_uid }}"
+      register: squatter_check
+      failed_when: false
+
+    - name: Rename squatter user to free up UID
+      ansible.builtin.user:
+        name: "{{ squatter_check.ansible_facts.getent_passwd.keys() | first }}"
+        non_unique: true
+        uid: 9999
+        password: "!"
+        password_lock: true
+      when:
+        - squatter_check.ansible_facts.getent_passwd is defined
+        - (squatter_check.ansible_facts.getent_passwd.keys() | first) != target_username
+
+- name: Execute network defense and firewall standardization
+  ansible.builtin.include_tasks: firewall.yml
+
+- name: Apply system hardening and optimizations
+  ansible.builtin.include_tasks: housekeeping.yml

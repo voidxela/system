@@ -72,6 +72,11 @@
     - dev_node | default(false)
     - "'balanced' not in current_tuned.stdout"
 
+- name: Ensure dnf-automatic is installed
+  ansible.builtin.dnf:
+    name: dnf-automatic
+    state: present
+
 - name: Configure dnf-automatic to apply ONLY security updates
   ansible.builtin.copy:
     dest: /etc/dnf/automatic.conf

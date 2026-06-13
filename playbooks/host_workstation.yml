@@ -1,0 +1,10 @@
+---
+- name: Provision Local Workstation
+  hosts: all
+  become: true
+  gather_facts: true
+  roles:
+    - core
+    - system
+    - user
+    - dev

@@ -1,0 +1,9 @@
+---
+- name: Build App Base Layer
+  hosts: all
+  become: false
+  gather_facts: false
+  roles:
+    - role: core
+    - role: user
+      configure_sudo: false

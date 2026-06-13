@@ -5,7 +5,7 @@
     state: present
 
 - name: Install mise (Workstations)
-  ansible.builtin.include_tasks: "../base/tasks/install_gh_release.yml"
+  ansible.builtin.include_tasks: "{{ role_path }}/../core/tasks/install_gh_release.yml"
   vars:
     gh_app_name: "Mise"
     gh_repo: "jdx/mise"
@@ -31,4 +31,4 @@
         }
 
 - name: Execute dotfile engine
-  ansible.builtin.include_tasks: "../base/tasks/process_dotfiles.yml"
+  ansible.builtin.include_tasks: "{{ role_path }}/../user/tasks/process_dotfiles.yml"

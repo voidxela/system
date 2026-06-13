@@ -1,0 +1,10 @@
+---
+- name: Build Dev Container Image
+  hosts: all
+  become: false
+  gather_facts: false
+  roles:
+    - role: core
+    - role: user
+      configure_sudo: false
+    - role: dev
