@@ -1,7 +1,9 @@
 ---
-- name: Install Helix editor via DNF
+- name: Install core development utilities via DNF
   ansible.builtin.dnf:
-    name: helix
+    name:
+      - helix
+      - just
     state: present
 
 - name: Install mise (Workstations)

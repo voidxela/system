@@ -14,6 +14,22 @@
       register: squatter_check
       failed_when: false
 
+    - name: Set squatter detection flag
+      ansible.builtin.set_fact:
+        squatter_detected: >-
+          {{
+            squatter_check.ansible_facts.getent_passwd is defined and
+            (squatter_check.ansible_facts.getent_passwd.keys() | first) != target_username
+          }}
+
+    - name: Interactive Mode (Prompt for eviction)
+      ansible.builtin.pause:
+        prompt: "UID 1000 is currently owned by '{{ squatter_check.ansible_facts.getent_passwd.keys() | first }}'. Evict this user to UID 9999? (y/n)"
+      register: squatter_prompt
+      when:
+        - squatter_detected | bool
+        - interactive | default(false) | bool
+
     - name: Rename squatter user to free up UID
       ansible.builtin.user:
         name: "{{ squatter_check.ansible_facts.getent_passwd.keys() | first }}"
@@ -22,8 +38,8 @@
         password: "!"
         password_lock: true
       when:
-        - squatter_check.ansible_facts.getent_passwd is defined
-        - (squatter_check.ansible_facts.getent_passwd.keys() | first) != target_username
+        - squatter_detected | bool
+        - (not (interactive | default(false) | bool)) or (squatter_prompt.user_input | default('y') | lower == 'y')
 
 - name: Execute network defense and firewall standardization
   ansible.builtin.include_tasks: firewall.yml

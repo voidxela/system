@@ -1,11 +1,11 @@
 ---
 - name: Non-Interactive Mode (Safe Skip)
-  when: not (interactive_dotfiles | bool)
+  when: not (interactive | bool)
   ansible.builtin.debug:
-    msg: "WARNING: {{ file_item.dest }} was modified manually. Skipping. Run with -e 'interactive_dotfiles=true' to review."
+    msg: "WARNING: {{ file_item.dest }} was modified manually. Skipping. Run with -e 'interactive=true' to review."
 
 - name: Interactive Mode (Diff & Prompt)
-  when: interactive_dotfiles | bool
+  when: interactive | bool
   block:
     - name: Create temporary workspace
       ansible.builtin.tempfile:

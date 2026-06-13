@@ -7,6 +7,7 @@ ssh_public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOfFe1qJjOJt35nEtIfYpzq4JiZ
 
 config_lock_path: "/home/{{ target_username }}/.config/system-config.json.lock"
 
-# Set to true to prompt for confirmation when a manual edit is detected.
-# When false, the playbook defaults to a safe skip.
-interactive_dotfiles: false
+# Set to true to prompt for confirmation during destructive actions
+# (e.g., squatter UID eviction, dotfile conflict overwrites).
+# When false, defaults to a safe skip for dotfiles and an automatic eviction for users.
+interactive: false

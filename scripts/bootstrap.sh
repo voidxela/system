@@ -3,10 +3,9 @@
 # Exit immediately if a command exits with a non-zero status
 set -e
 
-# Reattach standard input to the terminal so interactive prompts work!
+# Reattach standard input to the terminal so interactive prompts work
 exec < /dev/tty
 
-# Define your repository URL
 REPO_URL="https://github.com/voidxela/system-config.git"
 DEST_DIR="$HOME/.local/share/system-config"
 mkdir -p "${DEST_DIR%/*}"
@@ -29,11 +28,11 @@ while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
 
 # 2. Ensure prerequisites are installed via dnf
 if ! command -v ansible-playbook &> /dev/null || ! command -v git &> /dev/null; then
-    echo "📦 Installing Ansible and Git..."
+    echo "📦 Installing prerequisites (Ansible, Git)..."
     sudo dnf install -y ansible-core git
 fi
 
-# 3. Clone or pull the latest repository (with credential helper bypass)
+# 3. Clone or pull the latest repository
 if [ -d "$DEST_DIR" ]; then
     echo "🔄 Updating existing repository at $DEST_DIR..."
     env GIT_TERMINAL_PROMPT=0 git -c credential.helper= -C "$DEST_DIR" pull --quiet
@@ -43,12 +42,11 @@ else
 fi
 
 # 4. Execute the playbook interactively
-echo "⚙️ Executing Ansible playbook..."
+echo "⚙️ Executing Ansible playbook locally..."
 cd "$DEST_DIR"
 
-# Run with interactive_dotfiles enabled, and dynamically inject the become flag
 ansible-playbook -i "localhost," -c local playbooks/host_workstation.yml \
-    -e "interactive_dotfiles=true" \
+    -e "interactive=true" \
     ${BECOME_FLAG}
 
 echo "✅ System standardization complete!"
