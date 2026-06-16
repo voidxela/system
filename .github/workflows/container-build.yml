@@ -58,5 +58,5 @@ jobs:
           image="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
           for tag in $(podman images "$image" --format '{{.Tag}}'); do
             [[ "$tag" == "<none>" ]] && continue
-            podman push --log-level=debug "${image}:${tag}"
+            podman push "${image}:${tag}"
           done
