@@ -6,7 +6,7 @@
       - just
     state: present
 
-- name: Install mise (Workstations)
+- name: Install mise
   ansible.builtin.include_tasks: "{{ role_path }}/../core/tasks/install_gh_release.yml"
   vars:
     gh_app_name: "Mise"

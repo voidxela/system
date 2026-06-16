@@ -74,4 +74,8 @@
 
     - name: "{{ gh_app_name }} | Restore SELinux context"
       ansible.builtin.command: "restorecon -Rv {{ gh_binary_path }}"
-      when: gh_selinux | default(false) | bool
+      when:
+        - gh_selinux | default(false) | bool
+        - ansible_facts.selinux is defined
+        - ansible_facts.selinux is mapping
+        - ansible_facts.selinux.status == 'enabled'

@@ -1,9 +1,59 @@
 ---
-- name: Build App Base Layer
-  hosts: all
-  become: false
+# ==========================================
+# PLAY 1: Scaffold the Buildah Working Container
+# ==========================================
+- name: Initialize Buildah Container
+  hosts: localhost
+  connection: local
   gather_facts: false
+  tasks:
+    - name: Create working container from base image
+      ansible.builtin.command: buildah from registry.fedoraproject.org/fedora:latest
+      register: build_container
+      changed_when: true
+
+    - name: Add working container to dynamic inventory
+      ansible.builtin.add_host:
+        name: "{{ build_container.stdout }}"
+        ansible_connection: buildah
+
+# ==========================================
+# PLAY 2: Provision the Container
+# ==========================================
+- name: Provision Application Layer
+  hosts: "{{ hostvars['localhost']['build_container']['stdout'] }}"
+  gather_facts: false
+  pre_tasks:
+    - name: Bootstrap Python for Ansible module execution
+      ansible.builtin.raw: dnf install -y python3
+      changed_when: true
+    - name: Gather facts manually now that Python exists
+      ansible.builtin.setup:
   roles:
     - role: core
     - role: user
       configure_sudo: false
+
+# ==========================================
+# PLAY 3: Commit Image & Apply Version Matrix
+# ==========================================
+- name: Commit and Tag Immutable Image
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    container_id: "{{ hostvars['localhost']['build_container']['stdout'] }}"
+    registry_path: "localhost/system-config"
+  tasks:
+    - name: Commit working container to tagging matrix
+      ansible.builtin.command: >
+        buildah commit {{ container_id }} {{ registry_path }}:{{ item }}
+      loop:
+        - "{{ image_version }}-{{ image_variant }}-{{ git_sha }}"
+        - "v{{ image_version.split('.')[0] }}-{{ image_variant }}"
+        - "{{ image_variant }}-latest"
+      changed_when: true
+
+    - name: Clean up working container
+      ansible.builtin.command: buildah rm {{ container_id }}
+      changed_when: true
