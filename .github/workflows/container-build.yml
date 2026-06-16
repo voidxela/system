@@ -12,7 +12,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository_owner }}/system
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   build:
@@ -53,4 +53,4 @@ jobs:
         run: just build-${{ matrix.base }} -e "target_registry=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
 
       - name: Push all tags
-        run: podman push --all-tags ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        run: podman push --log-level=debug --all-tags ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
