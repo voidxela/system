@@ -53,4 +53,10 @@ jobs:
         run: just build-${{ matrix.base }} -e "target_registry=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
 
       - name: Push all tags
-        run: podman push --log-level=debug --all-tags ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        run: |
+          set -euo pipefail
+          image="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          for tag in $(podman images "$image" --format '{{.Tag}}'); do
+            [[ "$tag" == "<none>" ]] && continue
+            podman push --log-level=debug "${image}:${tag}"
+          done
