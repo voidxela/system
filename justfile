@@ -6,9 +6,6 @@ set shell := ["bash", "-c"]
 git_sha := `git rev-parse --short HEAD 2>/dev/null || echo "local"`
 # Read the semantic version (fallback to 0.0.0 if file is missing)
 app_version := `cat VERSION 2>/dev/null || echo "0.0.0"`
-# Default container registry path for local builds
-# Override on the command line, e.g.: just target_registry=ghcr.io/owner/system build-app
-target_registry := "localhost/system"
 
 # List available commands if `just` is run without arguments
 default:
