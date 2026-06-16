@@ -29,13 +29,17 @@
     state: present
     key: "{{ ssh_public_key }}"
 
-- name: Ensure base configuration directory exists
+- name: Ensure base XDG user directories exist
   ansible.builtin.file:
-    path: "/home/{{ target_username }}/.config"
+    path: "/home/{{ target_username }}/{{ item }}"
     state: directory
     owner: "{{ target_username }}"
     group: "{{ target_username }}"
     mode: "0755"
+  loop:
+    - .config
+    - .local/bin
+    - .local/share
 
 - name: Check if configuration lock file exists
   ansible.builtin.stat:
