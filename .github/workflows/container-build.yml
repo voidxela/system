@@ -1,0 +1,56 @@
+---
+name: Container Build Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+    paths:
+      - VERSION
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/system
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        base: [app, dev]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install container tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y buildah podman
+
+      - name: Install ansible-core and just
+        run: |
+          python3 -m pip install ansible-core
+          curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to /usr/local/bin
+
+      - name: Install Ansible dependencies
+        run: ansible-galaxy collection install -r requirements.yml
+
+      - name: Authenticate with registry
+        uses: redhat-actions/podman-login@v1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build image
+        run: just build-${{ matrix.base }} target_registry=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      - name: Push all tags
+        run: podman push --all-tags ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}

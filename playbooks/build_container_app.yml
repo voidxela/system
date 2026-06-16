@@ -62,7 +62,7 @@
   gather_facts: false
   vars:
     container_id: "{{ hostvars['localhost']['build_container']['stdout'] }}"
-    registry_path: "localhost/system"
+    registry_path: "{{ target_registry | default('localhost/system') }}"
   tasks:
     - name: Finalize and commit container
       block:
