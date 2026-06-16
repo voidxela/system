@@ -18,7 +18,7 @@ The playbook uses a decoupled, single-responsibility role architecture to guaran
 To provision a fresh desktop or update your existing local environment for the first time, run the bootstrap script. This will install prerequisites (`ansible`, `git`), clone the repository into `~/.local/share/system-config`, and execute the workstation playbook interactively.
 
 ~~~bash
-curl -fsSL https://raw.githubusercontent.com/voidxela/system-config/main/scripts/bootstrap.sh | bash
+curl -fsSL https://raw.githubusercontent.com/voidxela/system/main/scripts/bootstrap.sh | bash
 ~~~
 
 ### 2. Cloud VPS Provisioning (Zero-Touch)
@@ -34,7 +34,7 @@ packages:
   - ansible-core
   - just
 runcmd:
-  - git clone --quiet https://github.com/voidxela/system-config.git /root/system-config
+  - git clone --quiet https://github.com/voidxela/system.git /root/system-config
   - cd /root/system-config
   - just server localhost -c local -e "interactive=false"
 ~~~

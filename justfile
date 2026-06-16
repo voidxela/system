@@ -40,7 +40,6 @@ build-dev +args='':
         -e "image_version={{app_version}}" \
         -e "git_sha={{git_sha}}" \
         -e "image_variant=dev" \
-        -e "target_registry={{target_registry}}" \
         {{args}}
 
 # Build the lean app base layer via Buildah
@@ -49,5 +48,4 @@ build-app +args='':
         -e "image_version={{app_version}}" \
         -e "git_sha={{git_sha}}" \
         -e "image_variant=app" \
-        -e "target_registry={{target_registry}}" \
         {{args}}

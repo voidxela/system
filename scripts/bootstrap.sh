@@ -6,7 +6,7 @@ set -e
 # Reattach standard input to the terminal so interactive prompts work
 exec < /dev/tty
 
-REPO_URL="https://github.com/voidxela/system-config.git"
+REPO_URL="https://github.com/voidxela/system.git"
 DEST_DIR="$HOME/.local/share/system-config"
 mkdir -p "${DEST_DIR%/*}"
 
