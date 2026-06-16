@@ -44,15 +44,24 @@
   gather_facts: false
   vars:
     container_id: "{{ hostvars['localhost']['build_container']['stdout'] }}"
-    registry_path: "localhost/system-config"
+    registry_path: "localhost/system"
   tasks:
+    - name: Configure OCI image metadata (User, Workspace, Shell)
+      ansible.builtin.command: >
+        buildah config
+        --user {{ target_username }}
+        --workingdir /home/{{ target_username }}
+        --cmd /bin/zsh
+        {{ container_id }}
+      changed_when: true
+
     - name: Commit working container to tagging matrix
       ansible.builtin.command: >
         buildah commit {{ container_id }} {{ registry_path }}:{{ item }}
       loop:
-        - "{{ image_version }}-{{ image_variant }}-{{ git_sha }}"
-        - "v{{ image_version.split('.')[0] }}-{{ image_variant }}"
-        - "{{ image_variant }}-latest"
+        - "{{ image_version | default('0.0.0') }}-{{ image_variant | default('dev') }}-{{ git_sha | default('local') }}"
+        - "v{{ (image_version | default('0.0.0')).split('.')[0] }}-{{ image_variant | default('dev') }}"
+        - "{{ image_variant | default('dev') }}-latest"
       changed_when: true
 
     - name: Clean up working container
