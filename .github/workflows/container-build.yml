@@ -50,7 +50,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build image
-        run: just build-${{ matrix.base }} -e "target_registry=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+        run: just build-${{ matrix.base }} -e "target_registry=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" -e "target_user=user"
 
       - name: Push all tags
         run: |
