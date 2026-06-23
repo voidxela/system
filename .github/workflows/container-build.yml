@@ -5,7 +5,6 @@ on:
   push:
     branches:
       - main
-      - dev
     paths:
       - VERSION
   workflow_dispatch:
@@ -25,29 +24,21 @@ jobs:
       matrix:
         base: [app, dev]
 
+    container:
+      image: ghcr.io/${{ github.repository }}:dev-latest
+      options: --privileged
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install container tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y buildah podman
-
-      - name: Install ansible-core and just
-        run: |
-          python3 -m pip install ansible-core
-          curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to /usr/local/bin
-
-      - name: Install Ansible dependencies
-        run: ansible-galaxy collection install -r requirements.yml
-
       - name: Authenticate with registry
-        uses: redhat-actions/podman-login@v1
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ${{ env.REGISTRY }} \
+            -u '${{ github.actor }}' --password-stdin
 
       - name: Build image
         run: just build-${{ matrix.base }} -e "target_registry=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" -e "target_username=user"
