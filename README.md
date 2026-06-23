@@ -11,6 +11,28 @@ The playbook uses a decoupled, single-responsibility role architecture to guaran
 * **`dev` & `container_tools`:** Injects heavy development tooling (`helix`, `mise`) and native container build stacks (`buildah`, `podman`) onto local workstations.
 * **`container_host`:** Configures subuid/subgid namespaces and runtime prerequisites for remote rootless container hosts.
 
+## 🧪 Testing & CI/CD
+
+This repository leverages [Molecule](https://ansible.readthedocs.io/projects/molecule/) with the **Podman** driver to validate all Ansible roles against idempotency guarantees and prevent regressions across target environments. Each role is tested idempotently in disposable containers for both **Fedora** (workstation) and **Rocky Linux** (server) runtimes.
+
+Initialize the local testing environment:
+
+~~~bash
+just test-init
+~~~
+
+Execute the full test suite across every role containing a `molecule/` configuration:
+
+~~~bash
+just test
+~~~
+
+Run tests for a single role (e.g., `container_host`):
+
+~~~bash
+just test container_host
+~~~
+
 ## 🚀 Deployment
 
 ### 1. Local Workstation Bootstrap

@@ -1,0 +1,4 @@
+molecule>=24.0.0
+molecule-plugins[podman]>=23.0.0
+ansible-lint
+flake8

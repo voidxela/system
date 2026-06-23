@@ -46,3 +46,27 @@ build-app +args='':
         -e "git_sha={{git_sha}}" \
         -e "image_variant=app" \
         {{args}}
+
+# --- Testing ---
+
+# Install Python testing dependencies for local Molecule development
+test-init:
+    @which podman > /dev/null 2>&1 || { echo "Error: podman is not installed. Please install Podman first."; exit 1; }
+    @which molecule > /dev/null 2>&1 && echo "molecule is already installed." || echo "molecule will be installed from requirements.txt."
+    @pip install -r requirements.txt
+    @ansible-galaxy collection install ansible.posix containers.podman
+
+# Run Molecule tests for all roles or a specific role
+test target_role="all":
+    @if [ "{{target_role}}" = "all" ]; then \
+        for role in roles/*/; do \
+            role_name="$(basename "$role")"; \
+            if [ -d "roles/$role_name/molecule" ]; then \
+                echo "🧪 Testing role: $role_name..."; \
+                (cd "roles/$role_name" && molecule test) || exit 1; \
+            fi; \
+        done; \
+    else \
+        echo "🧪 Testing role: {{target_role}}..."; \
+        (cd "roles/{{target_role}}" && molecule test) || exit 1; \
+    fi

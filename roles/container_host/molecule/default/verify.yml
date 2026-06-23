@@ -1,0 +1,44 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: false
+  vars:
+    target_username: "testuser"
+  tasks:
+    - name: Check podman binary responds to --version
+      ansible.builtin.command:
+        cmd: podman --version
+      register: podman_version
+      changed_when: false
+
+    - name: Assert podman is installed
+      ansible.builtin.assert:
+        that:
+          - podman_version.rc == 0
+        success_msg: "podman is installed and responds to --version"
+
+    - name: Check subuid entry for target user
+      ansible.builtin.command:
+        cmd: grep "^{{ target_username }}:100000:65536" /etc/subuid
+      register: subuid_check
+      changed_when: false
+      failed_when: false
+
+    - name: Assert subuid allocation is correct
+      ansible.builtin.assert:
+        that:
+          - subuid_check.rc == 0
+        success_msg: "/etc/subuid contains accurate allocation for {{ target_username }}"
+
+    - name: Check subgid entry for target user
+      ansible.builtin.command:
+        cmd: grep "^{{ target_username }}:100000:65536" /etc/subgid
+      register: subgid_check
+      changed_when: false
+      failed_when: false
+
+    - name: Assert subgid allocation is correct
+      ansible.builtin.assert:
+        that:
+          - subgid_check.rc == 0
+        success_msg: "/etc/subgid contains accurate allocation for {{ target_username }}"
