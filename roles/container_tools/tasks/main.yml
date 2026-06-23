@@ -6,4 +6,6 @@
       - buildah
       - podman-compose # Highly recommended for testing multi-container apps locally
       - podman-docker # Aliases 'docker' commands to 'podman' for muscle memory
+      - shadow-utils # Provides newuidmap/newgidmap for rootless container runtime
+      - fuse-overlayfs # Userspace overlayfs backend for rootless storage
     state: present

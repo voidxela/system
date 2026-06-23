@@ -27,3 +27,4 @@
     name: podman-auto-update.timer
     state: started
     enabled: true
+  when: container_host_runtime | default(true) | bool

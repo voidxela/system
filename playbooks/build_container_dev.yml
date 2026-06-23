@@ -47,6 +47,16 @@
           ansible.builtin.include_role:
             name: dev
 
+        - name: Apply container build and runtime stack
+          ansible.builtin.include_role:
+            name: container_tools
+
+        - name: Apply rootless container host configuration
+          ansible.builtin.include_role:
+            name: container_host
+          vars:
+            container_host_runtime: false
+
       rescue:
         - name: Emergency Cleanup | Destroy orphaned working container
           ansible.builtin.command: "buildah rm {{ inventory_hostname }}"

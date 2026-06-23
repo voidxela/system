@@ -7,7 +7,12 @@
       - openssl-devel
       - helix
       - just
+      - ansible-core
     state: present
+
+- name: Install Ansible collections for provisioning and container builds
+  ansible.builtin.command: ansible-galaxy collection install ansible.posix containers.podman
+  changed_when: true
 
 - name: Install mise
   ansible.builtin.include_tasks: "{{ role_path }}/../core/tasks/install_gh_release.yml"
