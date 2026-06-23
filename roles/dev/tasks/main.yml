@@ -2,6 +2,9 @@
 - name: Install core development utilities via DNF
   ansible.builtin.dnf:
     name:
+      - "@Development Tools"
+      - ncurses-devel
+      - openssl-devel
       - helix
       - just
     state: present
