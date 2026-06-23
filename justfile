@@ -17,7 +17,7 @@ default:
     ./scripts/bootstrap.sh
 
 @bundle:
-    ./scripts/bundle.sh
+    npx repomix
 
 # --- Provisioning ---
 
