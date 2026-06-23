@@ -15,6 +15,14 @@
     append: true
     state: present
 
+- name: Ensure home directory is owned by target user
+  ansible.builtin.file:
+    path: "/home/{{ target_username }}"
+    state: directory
+    owner: "{{ target_username }}"
+    group: "{{ target_username }}"
+    mode: "0750"
+
 - name: Configure passwordless sudo for wheel group
   ansible.builtin.copy:
     content: "%wheel ALL=(ALL) NOPASSWD: ALL"
