@@ -9,3 +9,13 @@
       - shadow-utils # Provides newuidmap/newgidmap for rootless container runtime
       - fuse-overlayfs # Userspace overlayfs backend for rootless storage
     state: present
+
+# Fedora assigns cap_setuid/cap_setgid file caps to these binaries, which buildah
+# commit strips. Enforce classic mode bits so they survive the image commit.
+- name: Set setuid/setgid bits on namespace helpers for rootless runtime
+  ansible.builtin.file:
+    path: "/usr/bin/{{ item.name }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - {name: newuidmap, mode: "04755"}
+    - {name: newgidmap, mode: "02755"}
